@@ -284,6 +284,8 @@ CJSON_PUBLIC(char*) cJSON_SetValuestring(cJSON *object, const char *valuestring)
 
 /* malloc/free objects using the malloc/free functions that have been set with cJSON_InitHooks */
 CJSON_PUBLIC(void *) cJSON_malloc(size_t size);
+CJSON_PUBLIC(void *) cJSON_calloc(size_t _NumOfElements, size_t _SizeOfElements);
+CJSON_PUBLIC(void *) cJSON_realloc(void *ptr, size_t size);
 CJSON_PUBLIC(void) cJSON_free(void *object);
 
 #ifdef __cplusplus

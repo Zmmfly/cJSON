@@ -3110,6 +3110,18 @@ CJSON_PUBLIC(void *) cJSON_malloc(size_t size)
     return global_hooks.allocate(size);
 }
 
+CJSON_PUBLIC(void *) cJSON_calloc(size_t _NumOfElements, size_t _SizeOfElements)
+{
+    void *tmp = global_hooks.allocate(_NumOfElements * _SizeOfElements);
+    if(tmp)memset(tmp, 0, _NumOfElements * _SizeOfElements);
+    return tmp;
+}
+
+CJSON_PUBLIC(void *) cJSON_realloc(void *ptr, size_t size)
+{
+    return global_hooks.reallocate(ptr, size);
+}
+
 CJSON_PUBLIC(void) cJSON_free(void *object)
 {
     global_hooks.deallocate(object);
