@@ -314,6 +314,24 @@ int cJSON_msgpack(msgpack_packer *pk, cJSON *root)
             }
             break;
 
+        case cJSON_Bin:
+            if( root->binptr == NULL )
+            {
+                ret = -1;
+                break;
+            }
+            ret = msgpack_pack_bin_with_body(pk, root->binptr, root->binsize);
+            break;
+
+        case cJSON_Ext:
+            if( root->binptr == NULL )
+            {
+                ret = -1;
+                break;
+            }
+            ret = msgpack_pack_ext_with_body(pk, root->binptr, root->binsize, root->extype);
+            break;
+
         case cJSON_Array:
             sz = cJSON_GetArraySize(root);
             if(msgpack_pack_array(pk, sz) != 0) return -1;

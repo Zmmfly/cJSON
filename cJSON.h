@@ -95,6 +95,8 @@ then using the CJSON_API_VISIBILITY flag to "export" the same symbols the way CJ
 #define cJSON_Array  (1 << 5)
 #define cJSON_Object (1 << 6)
 #define cJSON_Raw    (1 << 7) /* raw json */
+#define cJSON_Bin    ( (1<<6) | (1<<0) )
+#define cJSON_Ext    ( (1<<6) | (1<<1) )
 
 #define cJSON_IsReference 256
 #define cJSON_StringIsConst 512
@@ -117,7 +119,12 @@ typedef struct cJSON
     int valueint;
     /* The item's number, if type==cJSON_Number */
     double valuedouble;
-
+    /* For msgpack's Bin type */
+    void *binptr;
+    size_t binsize;
+    /* For msgpack's Ext type */
+    unsigned char extype;
+    
     /* The item's name string, if this item is the child of, or is in the list of subitems of an object. */
     char *string;
 } cJSON;
@@ -190,6 +197,8 @@ CJSON_PUBLIC(cJSON_bool) cJSON_IsString(const cJSON * const item);
 CJSON_PUBLIC(cJSON_bool) cJSON_IsArray(const cJSON * const item);
 CJSON_PUBLIC(cJSON_bool) cJSON_IsObject(const cJSON * const item);
 CJSON_PUBLIC(cJSON_bool) cJSON_IsRaw(const cJSON * const item);
+CJSON_PUBLIC(cJSON_bool) cJSON_IsBin(const cJSON * const item);
+CJSON_PUBLIC(cJSON_bool) cJSON_IsExt(const cJSON * const item);
 
 /* These calls create a cJSON item of the appropriate type. */
 CJSON_PUBLIC(cJSON *) cJSON_CreateNull(void);
@@ -198,6 +207,8 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateFalse(void);
 CJSON_PUBLIC(cJSON *) cJSON_CreateBool(cJSON_bool boolean);
 CJSON_PUBLIC(cJSON *) cJSON_CreateNumber(double num);
 CJSON_PUBLIC(cJSON *) cJSON_CreateString(const char *string);
+CJSON_PUBLIC(cJSON *) cJSON_CreateBin(void *ptr, size_t size);
+CJSON_PUBLIC(cJSON *) cJSON_CreateExt(void *ptr, size_t size, unsigned char type);
 /* raw json */
 CJSON_PUBLIC(cJSON *) cJSON_CreateRaw(const char *raw);
 CJSON_PUBLIC(cJSON *) cJSON_CreateArray(void);
@@ -270,6 +281,8 @@ CJSON_PUBLIC(cJSON*) cJSON_AddStringToObject(cJSON * const object, const char * 
 CJSON_PUBLIC(cJSON*) cJSON_AddRawToObject(cJSON * const object, const char * const name, const char * const raw);
 CJSON_PUBLIC(cJSON*) cJSON_AddObjectToObject(cJSON * const object, const char * const name);
 CJSON_PUBLIC(cJSON*) cJSON_AddArrayToObject(cJSON * const object, const char * const name);
+CJSON_PUBLIC(cJSON*) cJSON_AddBinToObject(cJSON * const object, const char * const name, void *ptr, size_t size);
+CJSON_PUBLIC(cJSON*) cJSON_AddExtToObject(cJSON * const object, const char * const name, void *ptr, size_t size, unsigned char extype);
 
 /* When assigning an integer value, it needs to be propagated to valuedouble too. */
 #define cJSON_SetIntValue(object, number) ((object) ? (object)->valueint = (object)->valuedouble = (number) : (number))

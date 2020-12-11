@@ -2182,6 +2182,29 @@ CJSON_PUBLIC(cJSON*) cJSON_AddArrayToObject(cJSON * const object, const char * c
     return NULL;
 }
 
+CJSON_PUBLIC(cJSON*) cJSON_AddBinToObject(cJSON * const object, const char * const name, void *ptr, size_t size)
+{
+    cJSON *bin = cJSON_CreateBin(ptr, size);
+    if(add_item_to_object(object, name, bin, &global_hooks, false))
+    {
+        return bin;
+    }
+
+    cJSON_Delete(bin);
+    return NULL;
+}
+CJSON_PUBLIC(cJSON*) cJSON_AddExtToObject(cJSON * const object, const char * const name, void *ptr, size_t size, unsigned char extype)
+{
+    cJSON *ext = cJSON_CreateExt(ptr, size, extype);
+    if(add_item_to_object(object, name, ext, &global_hooks, false))
+    {
+        return ext;
+    }
+
+    cJSON_Delete(ext);
+    return NULL;
+}
+
 CJSON_PUBLIC(cJSON *) cJSON_DetachItemViaPointer(cJSON *parent, cJSON * const item)
 {
     if ((parent == NULL) || (item == NULL))
@@ -2459,6 +2482,43 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateString(const char *string)
         }
     }
 
+    return item;
+}
+
+CJSON_PUBLIC(cJSON *) cJSON_CreateBin(void *ptr, size_t size)
+{
+    cJSON *item = cJSON_New_Item(&global_hooks);
+    if(item)
+    {
+        item->type = cJSON_Bin;
+        item->binptr = cJSON_calloc(1, size);
+        if(!item->binptr)
+        {
+            cJSON_Delete(item);
+            return NULL;
+        }
+        memcpy(item->binptr, ptr, size);
+        item->binsize = size;
+    }
+    return item;
+}
+
+CJSON_PUBLIC(cJSON *) cJSON_CreateExt(void *ptr, size_t size, unsigned char type)
+{
+    cJSON *item = cJSON_New_Item(&global_hooks);
+    if(item)
+    {
+        item->type = cJSON_Ext;
+        item->binptr = cJSON_calloc(1, size);
+        if(!item->binptr)
+        {
+            cJSON_Delete(item);
+            return NULL;
+        }
+        memcpy(item->binptr, ptr, size);
+        item->binsize = size;
+        item->extype = type;
+    }
     return item;
 }
 
@@ -2978,6 +3038,26 @@ CJSON_PUBLIC(cJSON_bool) cJSON_IsRaw(const cJSON * const item)
     }
 
     return (item->type & 0xFF) == cJSON_Raw;
+}
+
+CJSON_PUBLIC(cJSON_bool) cJSON_IsBin(const cJSON * const item)
+{
+    if (item == NULL)
+    {
+        return false;
+    }
+
+    return (item->type & 0xFF) == cJSON_Bin;
+}
+
+CJSON_PUBLIC(cJSON_bool) cJSON_IsExt(const cJSON * const item)
+{
+    if (item == NULL)
+    {
+        return false;
+    }
+
+    return (item->type & 0xFF) == cJSON_Ext;
 }
 
 CJSON_PUBLIC(cJSON_bool) cJSON_Compare(const cJSON * const a, const cJSON * const b, const cJSON_bool case_sensitive)
