@@ -4,6 +4,8 @@ Ultralightweight JSON parser in ANSI C.
 
 ## Edit History
 
+Some code from [`MsgPack-c`](https://github.com/msgpack/msgpack-c)'s example.
+
 2020-12-07
 * Add MsgPack use cJSON hooks, and test pass
 * MsgPack version: `v3.3.0`
