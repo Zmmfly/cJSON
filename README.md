@@ -2,8 +2,9 @@
 
 Ultralightweight JSON parser in ANSI C.
 
-### Edit
-by Zmmfly
+## Edit History
+
+2020-12-07
 * Add MsgPack use cJSON hooks, and test pass
 * MsgPack version: `v3.3.0`
 * Add `cJSON_calloc`
@@ -11,9 +12,16 @@ by Zmmfly
 * Add `cJSON_PrintMsgPack`
 * Add `cJSON_ParseMsgPack`
 
+2020-12-11
+* Add `cJSON_Bin` and `cJSON_Ext` type
+* Add `binptr` and `binptr` and `extype` in `typedef struct cJSON`
+* Add `cJSON_IsBin` and `cJSON_IsBin` func
+* Add `cJSON_CreateBin` and `cJSON_CreateExt` func
+* Add `cJSON_AddBinToObject` and `cJSON_AddExtToObject` func
+
 ## Table of contents
 - [cJSON](#cjson)
-    - [Edit](#edit)
+  - [Edit History](#edit-history)
   - [Table of contents](#table-of-contents)
   - [License](#license)
   - [Usage](#usage)
