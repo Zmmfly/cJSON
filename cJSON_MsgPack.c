@@ -259,16 +259,28 @@ int cJSON_msgunpack(cJSON *root, msgpack_object msgobj, char *key)
             break;
 
         case MSGPACK_OBJECT_BIN:
-            return -1;
+            if(key) {
+                cJSON_AddBinToObject(root, key, msgobj.via.bin.ptr, msgobj.via.bin.size);\
+            } else {
+                item = cJSON_CreateBin(msgobj.via.bin.ptr, msgobj.via.bin.size);
+                cJSON_AddItemToArray(root, item);
+            }
             break;
 
         case MSGPACK_OBJECT_EXT:
-            return -1;
+            if(key) {
+                cJSON_AddExtToObject(root, key, msgobj.via.ext.ptr, msgobj.via.ext.size, msgobj.via.ext.type);
+            } else {
+                item = cJSON_CreateExt(msgobj.via.ext.ptr, msgobj.via.ext.size, msgobj.via.ext.type);
+                cJSON_AddItemToArray(root, item);
+            }
             break;
 
         default:
+            return -1;
             break;
     }
+    return 0;
 }
 
 int cJSON_msgpack(msgpack_packer *pk, cJSON *root)

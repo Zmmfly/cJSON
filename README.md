@@ -6,6 +6,10 @@ Ultralightweight JSON parser in ANSI C.
 
 Some code from [`MsgPack-c`](https://github.com/msgpack/msgpack-c)'s example.
 
+2020-12-24
+* Add msgpack bin and ext type support for parse
+* Sync cJSON code
+
 2020-12-07
 * Add MsgPack use cJSON hooks, and test pass
 * MsgPack version: `v3.3.0`
