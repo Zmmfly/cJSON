@@ -235,6 +235,11 @@ CJSON_PUBLIC(void) cJSON_InitHooks(cJSON_Hooks* hooks)
     {
         global_hooks.reallocate = realloc;
     }
+
+    if(hooks->realloc_fn != NULL)
+    {
+        global_hooks.reallocate = hooks->realloc_fn;
+    }
 }
 
 /* Internal constructor. */
