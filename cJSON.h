@@ -120,7 +120,7 @@ typedef struct cJSON
     /* The item's number, if type==cJSON_Number */
     double valuedouble;
     /* For msgpack's Bin type */
-    void *binptr;
+    unsigned char *binptr;
     size_t binsize;
     /* For msgpack's Ext type */
     unsigned char extype;

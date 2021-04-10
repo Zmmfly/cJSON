@@ -13,7 +13,7 @@ int cJSON_msgunpack(cJSON *root, msgpack_object msgobj, char *key);
  * @param length[in] MsgPack数据长度
  * 
  */
-CJSON_PUBLIC(cJSON*) cJSON_ParseMsgPack(char *data, size_t length)
+CJSON_PUBLIC(cJSON*) cJSON_ParseMsgPack(uint8_t *data, size_t length)
 {
     cJSON *root = NULL;
     msgpack_unpacked unpack_result;
@@ -21,7 +21,7 @@ CJSON_PUBLIC(cJSON*) cJSON_ParseMsgPack(char *data, size_t length)
     int i = 0; size_t off = 0;
     msgpack_unpacked_init(&unpack_result);
 
-    unpack_ret = msgpack_unpack_next(&unpack_result, data, length, &off);
+    unpack_ret = msgpack_unpack_next(&unpack_result, (char *)data, length, &off);
     if(unpack_ret == MSGPACK_UNPACK_SUCCESS)
     {
         // printf("unpack success\n");
@@ -44,6 +44,10 @@ CJSON_PUBLIC(cJSON*) cJSON_ParseMsgPack(char *data, size_t length)
         }
     }
 exit:
+    if(unpack_ret == MSGPACK_UNPACK_SUCCESS)
+    {
+        msgpack_unpacked_destroy(&unpack_result);
+    }
     return root;
 }
 
@@ -260,18 +264,18 @@ int cJSON_msgunpack(cJSON *root, msgpack_object msgobj, char *key)
 
         case MSGPACK_OBJECT_BIN:
             if(key) {
-                cJSON_AddBinToObject(root, key, msgobj.via.bin.ptr, msgobj.via.bin.size);\
+                cJSON_AddBinToObject(root, key, (void *)msgobj.via.bin.ptr, msgobj.via.bin.size);\
             } else {
-                item = cJSON_CreateBin(msgobj.via.bin.ptr, msgobj.via.bin.size);
+                item = cJSON_CreateBin((void *)msgobj.via.bin.ptr, msgobj.via.bin.size);
                 cJSON_AddItemToArray(root, item);
             }
             break;
 
         case MSGPACK_OBJECT_EXT:
             if(key) {
-                cJSON_AddExtToObject(root, key, msgobj.via.ext.ptr, msgobj.via.ext.size, msgobj.via.ext.type);
+                cJSON_AddExtToObject(root, key, (void *)msgobj.via.ext.ptr, msgobj.via.ext.size, msgobj.via.ext.type);
             } else {
-                item = cJSON_CreateExt(msgobj.via.ext.ptr, msgobj.via.ext.size, msgobj.via.ext.type);
+                item = cJSON_CreateExt((void *)msgobj.via.ext.ptr, msgobj.via.ext.size, msgobj.via.ext.type);
                 cJSON_AddItemToArray(root, item);
             }
             break;
