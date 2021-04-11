@@ -66,7 +66,7 @@ CJSON_PUBLIC(char *) cJSON_PrintMsgPack(cJSON *item, size_t *size)
     result = cJSON_msgpack(pk, item);
 
     *size = pk->msgpk_sz;
-    return pk->msgpk_buf;
+    return (char *)pk->msgpk_buf;
 }
 
 char *create_string(const char *ptr, size_t length)
