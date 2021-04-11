@@ -1,10 +1,10 @@
 #include "cJSON_MsgPack.h"
-#include "msgpack.h"
+#include "tiny_msgpk.h"
 #include <math.h>
 
 static char *format_string(const char *input);
-int cJSON_msgpack(msgpack_packer *pk, cJSON *root);
-int cJSON_msgunpack(cJSON *root, msgpack_object msgobj, char *key);
+int cJSON_msgpack(msgpk_t *pk, cJSON *root);
+int cJSON_msgunpack(cJSON *root, msgpk_parse_t *parse, char *key);
 
 /**
  * @brief 解析MsgPack
@@ -16,27 +16,26 @@ int cJSON_msgunpack(cJSON *root, msgpack_object msgobj, char *key);
 CJSON_PUBLIC(cJSON*) cJSON_ParseMsgPack(uint8_t *data, size_t length)
 {
     cJSON *root = NULL;
-    msgpack_unpacked unpack_result;
-    msgpack_unpack_return unpack_ret;
+    // msgpack_unpacked unpack_result;
+    // msgpack_unpack_return unpack_ret;
     int i = 0; size_t off = 0;
-    msgpack_unpacked_init(&unpack_result);
+    // msgpack_unpacked_init(&unpack_result);
+    msgpk_parse_t parse;
+    msgpk_decode_t decode;
 
-    unpack_ret = msgpack_unpack_next(&unpack_result, (char *)data, length, &off);
-    if(unpack_ret == MSGPACK_UNPACK_SUCCESS)
+    msgpk_parse_init(&parse, data, length);
+
+    if(!msgpk_parse_get(&parse, &decode))
     {
-        // printf("unpack success\n");
-        msgpack_object obj = unpack_result.data;
-        if(obj.type == MSGPACK_OBJECT_MAP)
+        if(decode.type_dec == MSGPK_MAP)
         {
-            // printf("unpack map\n");
             root = cJSON_CreateObject();
-            cJSON_msgunpack(root, obj, NULL);
+            cJSON_msgunpack(root, &parse, NULL);
         }
-        else if(obj.type == MSGPACK_OBJECT_ARRAY)
+        else if(decode.type_dec == MSGPK_ARR)
         {
-            // printf("unpack array\n");
             root = cJSON_CreateArray();
-            cJSON_msgunpack(root, obj, "a");
+            cJSON_msgunpack(root, &parse, "a");
         }
         else
         {
@@ -44,10 +43,7 @@ CJSON_PUBLIC(cJSON*) cJSON_ParseMsgPack(uint8_t *data, size_t length)
         }
     }
 exit:
-    if(unpack_ret == MSGPACK_UNPACK_SUCCESS)
-    {
-        msgpack_unpacked_destroy(&unpack_result);
-    }
+    msgpk_parse_deinit(&parse);
     return root;
 }
 
@@ -63,21 +59,14 @@ exit:
 CJSON_PUBLIC(char *) cJSON_PrintMsgPack(cJSON *item, size_t *size)
 {
     int result = -1;
-    msgpack_sbuffer sbuf;
-    msgpack_packer pk;
-    if( (item == NULL) || (size == NULL) ) return NULL;
+    msgpk_t *pk;
+    pk = msgpk_create(8, 4);
 
-    msgpack_sbuffer_init(&sbuf);
-    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+    if( (item == NULL) || (size == NULL) || (pk == NULL) ) return NULL;
+    result = cJSON_msgpack(pk, item);
 
-    result = cJSON_msgpack(&pk, item);
-
-    if( (result != 0) && (sbuf.data != NULL) )
-    {
-        msgpack_sbuffer_destroy(&sbuf);
-    }
-    *size = sbuf.size;
-    return sbuf.data;
+    *size = pk->msgpk_sz;
+    return pk->msgpk_buf;
 }
 
 char *create_string(const char *ptr, size_t length)
@@ -96,161 +85,205 @@ char *create_string(const char *ptr, size_t length)
  * @param key 
  * @return int 
  */
-int cJSON_msgunpack(cJSON *root, msgpack_object msgobj, char *key)
+int cJSON_msgunpack(cJSON *root, msgpk_parse_t *parse, char *key)
 {
-    cJSON *item = NULL, *array = NULL, *object = NULL;
-    char *tmp = NULL;
+    // cJSON *item = NULL, *array = NULL, *object = NULL;
+    union {
+        cJSON *item;
+        cJSON *array;
+        cJSON *object;
+    }cj;
 
-    if(root == NULL){
-        return -1;
+    int            ret     = -1;
+    char           *tmp    = NULL;
+    msgpk_decode_t *decode = cJSON_calloc(1, sizeof(msgpk_decode_t));
+    int64_t        i64     = 0;
+    uint64_t       u64     = 0;
+
+    if( (root == NULL) || (parse == NULL) || (decode == NULL) ){
+        goto __exit;
     }
-    switch (msgobj.type)
+
+    if ( msgpk_parse_get(parse, decode) != 0) return -1;
+    switch (decode->type_dec)
     {
-        case MSGPACK_OBJECT_NIL:
+        case MSGPK_NIL:
             if(key)
             {
                 cJSON_AddNullToObject(root, key);
             }else
             {
-                item = cJSON_CreateNull();
-                cJSON_AddItemToArray(root, item);
+                cj.item = cJSON_CreateNull();
+                cJSON_AddItemToArray(root, cj.item);
+            }
+            break;
+
+        case MSGPK_BOOL:
+            if(key)
+            {
+                cJSON_AddBoolToObject(root, key, decode->boolean ? cJSON_True : cJSON_False);
+            }else
+            {
+                cj.item = cJSON_CreateBool(decode->boolean ? cJSON_True : cJSON_False);
+                cJSON_AddItemToArray(root, cj.item);
+            }
+            break;
+
+        case MSGPK_UINT8:
+            u64 = decode->u8;
+            goto u64_decode;
+        case MSGPK_UINT16:
+            u64 = decode->u16;
+            goto u64_decode;
+        case MSGPK_UINT32:
+            u64 = decode->u32;
+            goto u64_decode;
+        case MSGPK_UINT64:
+            u64 = decode->u64;
+            u64_decode:
+            if(key)
+            {
+                cJSON_AddNumberToObject(root, key, u64);
+            }else
+            {
+                cj.item = cJSON_CreateNumber(u64);
+                cJSON_AddItemToArray(root, cj.item);
             }
             
             break;
 
-        case MSGPACK_OBJECT_BOOLEAN:
+        case MSGPK_INT8:
+            i64 = decode->i8;
+            goto i64_decode;
+
+        case MSGPK_INT16:
+            i64 = decode->i16;
+            goto i64_decode;
+
+        case MSGPK_INT32:
+            i64 = decode->i32;
+            goto i64_decode;
+
+        case MSGPK_INT64:
+            i64 = decode->i64;
+            i64_decode:
             if(key)
             {
-                cJSON_AddBoolToObject(root, key, msgobj.via.boolean ? cJSON_True : cJSON_False);
+                cJSON_AddNumberToObject(root, key, i64);
             }else
             {
-                item = cJSON_CreateBool(msgobj.via.boolean ? cJSON_True : cJSON_False);
-                cJSON_AddItemToArray(root, item);
+                cj.item = cJSON_CreateNumber(i64);
+                cJSON_AddItemToArray(root, cj.item);
             }
             break;
 
-        case MSGPACK_OBJECT_POSITIVE_INTEGER:
+        case MSGPK_FLOAT32:
             if(key)
             {
-                cJSON_AddNumberToObject(root, key, msgobj.via.u64);
+                cJSON_AddNumberToObject(root, key, decode->f32);
             }else
             {
-                item = cJSON_CreateNumber(msgobj.via.u64);
-                cJSON_AddItemToArray(root, item);
-            }
-            
-            break;
-
-        case MSGPACK_OBJECT_NEGATIVE_INTEGER:
-            if(key)
-            {
-                cJSON_AddNumberToObject(root, key, msgobj.via.i64);
-            }else
-            {
-                item = cJSON_CreateNumber(msgobj.via.i64);
-                cJSON_AddItemToArray(root, item);
+                cj.item = cJSON_CreateNumber(decode->f32);
+                cJSON_AddItemToArray(root, cj.item);
             }
             break;
 
-        case MSGPACK_OBJECT_FLOAT32:
-        case MSGPACK_OBJECT_FLOAT64 :
+        case MSGPK_FLOAT64 :
             if(key)
             {
-                cJSON_AddNumberToObject(root, key, msgobj.via.f64);
+                cJSON_AddNumberToObject(root, key, decode->f64);
             }else
             {
-                item = cJSON_CreateNumber(msgobj.via.f64);
-                cJSON_AddItemToArray(root, item);
+                cj.item = cJSON_CreateNumber(decode->f64);
+                cJSON_AddItemToArray(root, cj.item);
             }
             break;
 
-        case MSGPACK_OBJECT_STR:
+        case MSGPK_STRING:
             if(key)
             {
-                tmp = create_string(msgobj.via.str.ptr, msgobj.via.str.size);
+                tmp = create_string(decode->str, decode->length);
                 cJSON_AddStringToObject(root, key, tmp);
                 cJSON_free(tmp);
             }else
             {
-                tmp = create_string(msgobj.via.str.ptr, msgobj.via.str.size);
-                item = cJSON_CreateString(tmp);
-                cJSON_AddItemToArray(root, item);
+                tmp = create_string(decode->str, decode->length);
+                cj.item = cJSON_CreateString(tmp);
+                cJSON_AddItemToArray(root, cj.item);
                 cJSON_free(tmp);
             }
             break;
 
-        case MSGPACK_OBJECT_ARRAY:
+        case MSGPK_ARR:
             if(root->type == cJSON_Object)
             {
-                if(key == NULL) return -1;
-                array = cJSON_AddArrayToObject(root, key);
+                if(key == NULL) goto __exit;
+                cj.array = cJSON_AddArrayToObject(root, key);
             }
             else if( (root->type == cJSON_Array) && (key != NULL) )
             {
-                array = root;
+                cj.array = root;
             }
             else if( (root->type == cJSON_Array) && (key == NULL) )
             {
-                array = cJSON_CreateArray();
+                cj.array = cJSON_CreateArray();
             }
-            
             else
             {
-                return -1;
+                goto __exit;
             }
             
-            if(array == NULL) return -1;
-            if(msgobj.via.array.size != 0)
+            if(cj.array == NULL) goto __exit;
+            if(decode->length != 0)
             {
-                msgpack_object *p = msgobj.via.array.ptr;
-                msgpack_object *const pend = msgobj.via.array.ptr + msgobj.via.array.size;
-                for (; p < pend; p++)
+                for (size_t i=0; i<decode->length; i++)
                 {
-                    cJSON_msgunpack(array, *p, NULL);
+                    msgpk_parse_next(parse);
+                    cJSON_msgunpack(cj.array, parse, NULL);
                 }
             }
 
             if(root->type == cJSON_Array)
             {
-                cJSON_AddItemToArray(root, array);
+                cJSON_AddItemToArray(root, cj.array);
             }
             
             break;
 
-        case MSGPACK_OBJECT_MAP:
-            // printf("object map proccess\n");
+        case MSGPK_MAP:
             if(root->type == cJSON_Object)
             {
                 if(key == NULL)
                 {
-                    object = root;
+                    cj.object = root;
                 }else
                 {
-                    object = cJSON_AddObjectToObject(root, key);
+                    cj.object = cJSON_AddObjectToObject(root, key);
                 }
                 
             }
             else if(root->type == cJSON_Array)
             {
-                object = cJSON_CreateObject();
+                cj.object = cJSON_CreateObject();
             }
             else
             {
-                return -1;
+                goto __exit;
             }
 
-            if(object == NULL) return -1;
-            if(msgobj.via.map.size != 0)
+            if(cj.object == NULL) goto __exit;
+            if(decode->length != 0)
             {
-                msgpack_object_kv *p = msgobj.via.map.ptr;
-                msgpack_object_kv *const pend = msgobj.via.map.ptr + msgobj.via.map.size;
-                for (; p < pend; p++)
+                for (size_t i=0,loop=decode->length; i<loop; i++)
                 {
-                    /* The key must be string */
-                    if(p->key.type != MSGPACK_OBJECT_STR) return -1;
-                    tmp = create_string(p->key.via.str.ptr, p->key.via.str.size);
-                    // printf("map, key str:%s\n", tmp);
-                    cJSON_msgunpack(object, p->val, tmp);
+                    msgpk_parse_next(parse);
+                    msgpk_parse_get(parse, decode);
+
+                    if (decode->type_dec != MSGPK_STRING) goto __exit;
+                    tmp = create_string(decode->str, decode->length);
+
+                    msgpk_parse_next(parse);
+                    cJSON_msgunpack(cj.object, parse, tmp);
                     cJSON_free(tmp);
                 }
                 
@@ -258,75 +291,79 @@ int cJSON_msgunpack(cJSON *root, msgpack_object msgobj, char *key)
 
             if(root->type == cJSON_Array)
             {
-                cJSON_AddItemToArray(root, object);
+                cJSON_AddItemToArray(root, cj.object);
             }
             break;
 
-        case MSGPACK_OBJECT_BIN:
+        case MSGPK_BIN:
             if(key) {
-                cJSON_AddBinToObject(root, key, (void *)msgobj.via.bin.ptr, msgobj.via.bin.size);\
+                cJSON_AddBinToObject(root, key, (void *)decode->bin, decode->length);\
             } else {
-                item = cJSON_CreateBin((void *)msgobj.via.bin.ptr, msgobj.via.bin.size);
-                cJSON_AddItemToArray(root, item);
+                cj.item = cJSON_CreateBin((void *)decode->bin, decode->length);
+                cJSON_AddItemToArray(root, cj.item);
             }
             break;
 
-        case MSGPACK_OBJECT_EXT:
+        case MSGPK_EXT:
             if(key) {
-                cJSON_AddExtToObject(root, key, (void *)msgobj.via.ext.ptr, msgobj.via.ext.size, msgobj.via.ext.type);
+                cJSON_AddExtToObject(root, key, (void *)decode->bin, decode->length, decode->type_ext);
             } else {
-                item = cJSON_CreateExt((void *)msgobj.via.ext.ptr, msgobj.via.ext.size, msgobj.via.ext.type);
-                cJSON_AddItemToArray(root, item);
+                cj.item = cJSON_CreateExt((void *)decode->bin, decode->length, decode->type_ext);
+                cJSON_AddItemToArray(root, cj.item);
             }
             break;
 
         default:
-            return -1;
+            goto __exit;
             break;
     }
-    return 0;
+
+    ret = 0;
+
+__exit:
+    if (decode != NULL)cJSON_free(decode);
+    return ret;
 }
 
-int cJSON_msgpack(msgpack_packer *pk, cJSON *root)
+int cJSON_msgpack(msgpk_t *pk, cJSON *root)
 {
     int ret = 0;
     size_t sz = 0, i = 0;
     char *strval = NULL;
     cJSON *node;
 
-    if(root == NULL) return -1;
-
+    if(root == NULL || pk == NULL) return -1;
     switch (root->type & 0xff)
     {
         case cJSON_Invalid:
-            ret = -1;
+            ret = msgpk_add_nil(pk);
             break;
 
         case cJSON_False:
-            ret = msgpack_pack_false(pk);
+            ret = msgpk_add_false(pk);
             break;
 
         case cJSON_True:
-            ret = msgpack_pack_true(pk);
+            ret = msgpk_add_true(pk);
             break;
 
         case cJSON_NULL:
-            ret = msgpack_pack_nil(pk);
+            ret = msgpk_add_nil(pk);
             break;
 
         case cJSON_String:
             strval = format_string(root->valuestring);
-            ret = (strval != NULL) ? msgpack_pack_str_with_body(pk, strval, strlen(strval)) : -1;
+            ret = (strval != NULL) ? msgpk_add_str(pk, strval, strlen(strval)) : -1;
             if(strval) cJSON_free(strval);
             break;
 
         case cJSON_Number:
             if( isnan(root->valuedouble) || isinf(root->valuedouble) ) {
-                ret = msgpack_pack_nil(pk);
+                ret = msgpk_add_nil(pk);
             } else if ( root->valuedouble == root->valueint ) {
-                ret = msgpack_pack_int(pk, root->valueint);
+                ret = msgpk_add_int(pk, root->valueint);
             } else {
-                ret = msgpack_pack_double(pk, root->valuedouble);
+                ret = msgpk_add_float64(pk, root->valuedouble);
             }
             break;
 
@@ -336,7 +373,7 @@ int cJSON_msgpack(msgpack_packer *pk, cJSON *root)
                 ret = -1;
                 break;
             }
-            ret = msgpack_pack_bin_with_body(pk, root->binptr, root->binsize);
+            ret = msgpk_add_bin(pk, (uint8_t *)root->binptr, root->binsize);
             break;
 
         case cJSON_Ext:
@@ -345,12 +382,12 @@ int cJSON_msgpack(msgpack_packer *pk, cJSON *root)
                 ret = -1;
                 break;
             }
-            ret = msgpack_pack_ext_with_body(pk, root->binptr, root->binsize, root->extype);
+            ret = msgpk_add_ext(pk, root->extype, (uint8_t *)root->binptr, root->binsize);
             break;
 
         case cJSON_Array:
             sz = cJSON_GetArraySize(root);
-            if(msgpack_pack_array(pk, sz) != 0) return -1;
+            if(msgpk_add_arr(pk, sz) != 0) return -1;
 
             for ( i = 0; i < sz; i++)
             {
@@ -361,7 +398,7 @@ int cJSON_msgpack(msgpack_packer *pk, cJSON *root)
 
         case cJSON_Object:
             sz = cJSON_GetArraySize(root);
-            if( msgpack_pack_map(pk,sz) != 0 ) return -1;
+            if(msgpk_add_map(pk,sz) != 0) return -1;
 
             for ( i = 0; i < sz; i++)
             {
@@ -370,7 +407,7 @@ int cJSON_msgpack(msgpack_packer *pk, cJSON *root)
                 if(strval == NULL) return -1;
 
                 //put key
-                if( msgpack_pack_str_with_body(pk, strval, strlen(strval)) != 0 )
+                if( msgpk_add_str(pk, strval, strlen(strval)) != 0 )
                 {
                     cJSON_free(strval);       
                     return -1;
@@ -473,4 +510,3 @@ static char *format_string(const char *input)
     output[output_length] = '\0';
     return output;
 }
-

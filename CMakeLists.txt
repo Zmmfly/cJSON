@@ -117,7 +117,8 @@ option(ENABLE_TARGET_EXPORT "Enable exporting of CMake targets. Disable when it 
 set(CJSON_LIB cjson)
 
 file(GLOB HEADERS cJSON.h)
-set(SOURCES cJSON.c)
+set(SOURCES cJSON.c
+            cJSON_MsgPack.c)
 
 option(BUILD_SHARED_AND_STATIC_LIBS "Build both shared and static libraries" Off)
 option(CJSON_OVERRIDE_BUILD_SHARED_LIBS "Override BUILD_SHARED_LIBS with CJSON_BUILD_SHARED_LIBS" OFF)
