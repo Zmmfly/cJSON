@@ -273,6 +273,10 @@ CJSON_PUBLIC(void) cJSON_Delete(cJSON *item)
         {
             global_hooks.deallocate(item->string);
         }
+        if ( ((item->type == cJSON_Bin) || (item->type == cJSON_Ext)) && (item->binptr != NULL))
+        {
+            global_hooks.deallocate(item->binptr);
+        }
         global_hooks.deallocate(item);
         item = next;
     }
