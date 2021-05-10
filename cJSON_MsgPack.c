@@ -80,7 +80,7 @@ CJSON_PUBLIC(char *) cJSON_PrintMsgPack(cJSON *item, size_t *size)
 CJSON_PUBLIC(void) cJSON_DeleteMsgpk(void *msgpk)
 {
     if (msgpk == NULL)return;
-    cJSON_free(msgpk);
+    msgpk_free(msgpk);
 }
 
 char *create_string(const char *ptr, size_t length)
