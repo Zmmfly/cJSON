@@ -60,13 +60,25 @@ CJSON_PUBLIC(char *) cJSON_PrintMsgPack(cJSON *item, size_t *size)
 {
     int result = -1;
     msgpk_t *pk;
+    if (size == NULL) return NULL;
     pk = msgpk_create(8, 4);
 
     if( (item == NULL) || (size == NULL) || (pk == NULL) ) return NULL;
     result = cJSON_msgpack(pk, item);
+    if (result == -1) {
+        msgpk_delete(pk, 1, 1);
+        return NULL;
+    }
 
     *size = pk->msgpk_sz;
     return (char *)pk->msgpk_buf;
+}
+
+CJSON_PUBLIC(void) cJSON_DeleteMsgpk(void *msgpk)
+{
+    if (msgpk == NULL)return;
+    msgpk_t *pk = ((msgpk_t *)msgpk - ((msgpk_t *)0)->msgpk_buf);
+    msgpk_delete(pk, 1, 1);
 }
 
 char *create_string(const char *ptr, size_t length)

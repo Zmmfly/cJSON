@@ -14,6 +14,7 @@ extern "C"
 
 CJSON_PUBLIC(char *) cJSON_PrintMsgPack(cJSON *item, size_t *size);
 CJSON_PUBLIC(cJSON*) cJSON_ParseMsgPack(uint8_t *data, size_t length);
+CJSON_PUBLIC(void) cJSON_DeleteMsgpk(void *msgpk);
 
 #ifdef __cplusplus
 }
