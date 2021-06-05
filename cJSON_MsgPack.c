@@ -16,10 +16,7 @@ int cJSON_msgunpack(cJSON *root, msgpk_parse_t *parse, char *key);
 CJSON_PUBLIC(cJSON*) cJSON_ParseMsgPack(uint8_t *data, size_t length)
 {
     cJSON *root = NULL;
-    // msgpack_unpacked unpack_result;
-    // msgpack_unpack_return unpack_ret;
     int i = 0; size_t off = 0;
-    // msgpack_unpacked_init(&unpack_result);
     msgpk_parse_t parse;
     msgpk_decode_t decode;
 
