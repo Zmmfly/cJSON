@@ -44,6 +44,47 @@ exit:
     return root;
 }
 
+#if cJSON_FILE_ENABLE
+/**
+ * @brief Parse MessagePack from file
+ * 
+ * @param path[in] file path
+ * 
+ * @return cJSON*
+ * 
+ */
+CJSON_PUBLIC(cJSON*) cJSON_ParseMsgPack_from_file(const char *path)
+{
+    cJSON *root = NULL;
+    int i = 0; size_t off = 0;
+    msgpk_parse_t parse;
+    msgpk_decode_t decode;
+
+    msgpk_parse_init_file(&parse, path);
+
+    if(!msgpk_parse_get(&parse, &decode))
+    {
+        if(decode.type_dec == MSGPK_MAP)
+        {
+            root = cJSON_CreateObject();
+            cJSON_msgunpack(root, &parse, NULL);
+        }
+        else if(decode.type_dec == MSGPK_ARR)
+        {
+            root = cJSON_CreateArray();
+            cJSON_msgunpack(root, &parse, "a");
+        }
+        else
+        {
+            goto exit;
+        }
+    }
+exit:
+    msgpk_parse_deinit(&parse);
+    return root;
+}
+#endif
+
 /**
  * @brief 输出MsgPack
  * 
@@ -73,6 +114,36 @@ CJSON_PUBLIC(char *) cJSON_PrintMsgPack(cJSON *item, size_t *size)
     msgpk_delete(pk, 0, 1);
     return msgpk;
 }
+
+#if cJSON_FILE_ENABLE
+/**
+ * @brief Print MessagePack to file
+ * 
+ * @param path file path to save MessagePack
+ * @param item cJSON item
+ * 
+ * @return cJSON_bool cJSON_True for success, cJSON_False for failed
+ * 
+ */
+CJSON_PUBLIC(cJSON_bool) cJSON_PrintMsgPack_to_file(const char *path, cJSON *item)
+{
+    int result = -1;
+    msgpk_t *pk;
+    char *msgpk = NULL;
+    if (path == NULL) return cJSON_False;
+    pk = msgpk_file_create(path, 0xffffffff);
+
+    if( (item == NULL) || (pk == NULL) ) return NULL;
+    result = cJSON_msgpack(pk, item);
+    if (result == -1) {
+        msgpk_file_done(pk, 1);
+        return cJSON_False;
+    }
+
+    msgpk_file_done(pk, 1);
+    return cJSON_True;
+}
+#endif
 
 CJSON_PUBLIC(void) cJSON_DeleteMsgpk(void *msgpk)
 {
