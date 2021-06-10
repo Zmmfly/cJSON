@@ -16,7 +16,6 @@ int cJSON_msgunpack(cJSON *root, msgpk_parse_t *parse, char *key);
 CJSON_PUBLIC(cJSON*) cJSON_ParseMsgPack(uint8_t *data, size_t length)
 {
     cJSON *root = NULL;
-    int i = 0; size_t off = 0;
     msgpk_parse_t parse;
     msgpk_decode_t decode;
 
@@ -56,7 +55,6 @@ exit:
 CJSON_PUBLIC(cJSON*) cJSON_ParseMsgPack_from_file(const char *path)
 {
     cJSON *root = NULL;
-    int i = 0; size_t off = 0;
     msgpk_parse_t parse;
     msgpk_decode_t decode;
 
@@ -129,11 +127,10 @@ CJSON_PUBLIC(cJSON_bool) cJSON_PrintMsgPack_to_file(const char *path, cJSON *ite
 {
     int result = -1;
     msgpk_t *pk;
-    char *msgpk = NULL;
     if (path == NULL) return cJSON_False;
     pk = msgpk_file_create(path, 0xffffffff);
 
-    if( (item == NULL) || (pk == NULL) ) return NULL;
+    if( (item == NULL) || (pk == NULL) ) return cJSON_False;
     result = cJSON_msgpack(pk, item);
     if (result == -1) {
         msgpk_file_done(pk, 1);
