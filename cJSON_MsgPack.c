@@ -60,7 +60,7 @@ CJSON_PUBLIC(cJSON*) cJSON_ParseMsgPack_from_file(const char *path)
 
     msgpk_parse_init_file(&parse, path);
 
-    if(!msgpk_parse_get(&parse, &decode))
+    if(msgpk_parse_get(&parse, &decode) == MSGPK_OK)
     {
         if(decode.type_dec == MSGPK_MAP)
         {
